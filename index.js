@@ -15,7 +15,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Configurar el token de acceso a la API de Facebook
-const access_token = "EAATHwsWVYbgBAIv9wZB9sLFeuk52jVqAU4x6nin7ZCyFtQWwu1B9RIr7kiVZBogBpxAxJcZCCQQEP7u2EZCNJQUQ6rXoZB1mR4ogcZCwoRLJadxNYsfhS3m4yC0zXj66yFOiZCJv36njAhD64MZAVKJWa1u45g5gjxtqiYNeMBG6KmoDsc6cSRDDW37SjafpojSU7MvEbAqKZC2rDJDPJikxUkkxePNU1AXZBUZD";
+const access_token = "EAATHwsWVYbgBALrdxU0ZCNKIh5t29OvmAQko6EjGhYQTMZAxE6YYDjPxsZCF68WQ68o4MOjDBYRyZBOsm10jjsw9UuXVTZASLGbwk9d0WmDTx49Uw8K76DsyGsvTNTLk9yfgFT8r8pndmBKqdPZAJtdAqscLdjx3Tih0SaQTYAR9GNEoek3Inz3m3gEv3hVbxefaRkZCoPsUQZDZD";
 
 // Configurar las respuestas predeterminadas y las palabras claves
 const default_responses = {
