@@ -1,7 +1,46 @@
 // Importar los módulos necesarios
+const socket = io(); // Conectarse al servidor Socket.io
+
+const messageInput = document.getElementById('message-input');
+const sendButton = document.getElementById('send-button');
+const messages = document.getElementById('messages');
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+
 const express = require("express");
 const request = require("request");
 const bodyParser = require("body-parser");
+const path = require("path");
+
+
+// Manejar el evento de enviar un mensaje
+sendButton.addEventListener('click', () => {
+  const message = messageInput.value;
+  socket.emit('chat message', message); // Enviar el mensaje al servidor
+  messageInput.value = ''; // Limpiar el campo de entrada de mensajes
+});
+
+// Manejar el evento de recibir un mensaje del servidor
+socket.on('chat message', message => {
+  const messageElement = document.createElement('li');
+  messageElement.textContent = message;
+  messages.appendChild(messageElement);
+});
+
+// Manejar una conexión de cliente
+io.on('connection', socket => {
+  console.log('Un usuario se ha conectado');
+
+  // Manejar un mensaje de chat del cliente
+  socket.on('chat message', message => {
+    console.log(`Mensaje recibido: ${message}`);
+    socket.emit('chat message', `Servidor: He recibido tu mensaje: "${message}"`);
+  });
+});
+
+
+
+
 
 // Importar el módulo chatgpt de forma dinámica
 let ChatGPT;
@@ -45,6 +84,9 @@ const chatgpt_options = {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Configurar la ruta estática para servir el archivo HTML del chat
+app.use(express.static(path.join(__dirname, "public")));
+
 // Crear una ruta para verificar el webhook de Facebook
 app.get("/webhook", (req, res) => {
   // Verificar el token de verificación
@@ -53,11 +95,11 @@ app.get("/webhook", (req, res) => {
     // Devolver el challenge
     const challenge = req.query["hub.challenge"];
     res.send(challenge);
-    console.log("Webhook verificado"); // Añadir esta línea
+    console.log("Webhook verificado");
   } else {
-    // Devolver un error
+    // Devolver un mensaje de error
     res.send("Error al verificar el webhook");
-    console.log("Error al verificar el webhook"); // Añadir esta línea
+    console.error("Error al verificar el webhook");
   }
 });
 
@@ -76,45 +118,49 @@ app.post("/webhook", (req, res) => {
       // Obtener el id del emisor y del receptor
       const sender_id = event.sender.id || event.from.id;
       const recipient_id = event.recipient.id || event.post_id.split("_")[0];
-
       // Comprobar si hay texto en el mensaje o comentario
-      if (event.message && event.message.text) {
-        // Procesar el texto del mensaje
-        processText(event.message.text, sender_id, recipient_id);
-      } else if (event.comment_id && event.message) {
-        // Procesar el texto del comentario
-        processText(event.message, sender_id, recipient_id);
-      }
-    });
-    // Devolver una respuesta vacía
-    res.sendStatus(200);
-  }
+if (event.message && event.message.text) {
+  // Procesar el texto del mensaje
+  processText(event.message.text, sender_id, recipient_id);
+} else if (event.comment_id && event.message) {
+  // Procesar el texto del comentario
+  processText(event.message, sender_id, recipient_id);
+}
 });
+// Devolver una respuesta vacía
+res.sendStatus(200);
+}
+});
+
 
 // Función para procesar el texto del mensaje o comentario
 async function processText(text, sender_id, recipient_id) {
-  // Convertir el texto a minúsculas
-  text = text.toLowerCase();
-  // Buscar si hay alguna palabra clave en el texto
-  let keyword_found = false;
-  for (let keyword of keywords) {
-    if (text.includes(keyword)) {
-      // Enviar la respuesta predeterminada correspondiente
-      sendResponse(default_responses[keyword], sender_id, recipient_id);
-      keyword_found = true;
-      break;
-    }
+// Convertir el texto a minúsculas
+text = text.toLowerCase();
+// Buscar si hay alguna palabra clave en el texto
+let keyword_found = false;
+for (let keyword of keywords) {
+  if (text.includes(keyword)) {
+    // Enviar la respuesta predeterminada correspondiente
+    sendResponse(default_responses[keyword], sender_id, recipient_id);
+    keyword_found = true;
+    break;
   }
-  // Si no se encontró ninguna palabra clave, usar chatgpt para generar una respuesta personalizada
-  if (!keyword_found) {
-    try {
-      const res = await ChatGPT.query(text, chatgpt_options);
-      // Enviar la respuesta generada por chatgpt
-sendResponse(res, sender_id, recipient_id);
-} catch (err) {
-  // Enviar un mensaje de error
-  sendResponse('Lo siento, ha ocurrido un error al procesar tu solicitud. Por favor, inténtalo más tarde.', sender_id, recipient_id);
 }
+// Si no se encontró ninguna palabra clave, usar chatgpt para generar una respuesta personalizada
+if (!keyword_found) {
+  try {
+    const res = await ChatGPT.query(text, chatgpt_options);
+    // Enviar la respuesta generada por chatgpt
+    sendResponse(res, sender_id, recipient_id);
+  } catch (err) {
+    // Enviar un mensaje de error
+    sendResponse(
+      "Lo siento, ha ocurrido un error al procesar tu solicitud. Por favor, inténtalo de nuevo más tarde.",
+      sender_id,
+      recipient_id
+    );
+  }
 }
 }
 
@@ -122,40 +168,43 @@ sendResponse(res, sender_id, recipient_id);
 async function sendResponse(response, sender_id, recipient_id) {
 // Crear el cuerpo de la solicitud
 const body = {
-messaging_type: 'RESPONSE',
-recipient: {
-  id: sender_id
-},
-message: {
-  text: response
-}
+  messaging_type: "RESPONSE",
+  recipient: {
+    id: sender_id,
+  },
+  message: {
+    text: response,
+  },
 };
 // Crear las opciones de la solicitud
 const options = {
-url: 'https://graph.facebook.com/v12.0/me/messages',
-qs: { access_token: access_token },
-method: 'POST',
-json: body
+  url: "https://graph.facebook.com/v12.0/me/messages",
+  qs: { access_token: access_token },
+  method: "POST",
+  json: body,
 };
 // Enviar la solicitud a la API de Facebook
 await request(options, (err, res, body) => {
-if (err) {
-  // Mostrar el error en la consola
-  console.error('Error al enviar la respuesta:', err);
-} else if (body.error) {
-  // Mostrar el error en la consola
-  console.error('Error al enviar la respuesta:', body.error);
-}
+  if (err) {
+    // Mostrar el error en la consola
+    console.error("Error al enviar la respuesta:", err);
+  } else if (body.error) {
+    // Mostrar el error en la consola
+    console.error("Error al enviar la respuesta:", body.error);
+  }
 });
 }
 
 // Crear una ruta para el método GET y la ruta /
 app.get("/", (req, res) => {
-  // Enviar un mensaje de bienvenida
-  res.send("Bienvenidos 🍰\n\n Mi nombre es **CakeBot** y estoy aquí para ayudarte con tus pedidos de pasteles fríos y normales 🎂\n\nEscribe tu consulta y CakeBot te responderá lo antes posible 😊");
+// Enviar un mensaje de bienvenida
+res.send(
+  "Bienvenidos 🍰\n\n Mi nombre es **CakeBot** y estoy aquí para ayudarte con tus pedidos de pasteles fríos y normales 🎂\n\nEscribe tu consulta y CakeBot te responderá lo antes posible 😊"
+);
 });
 
 // Iniciar el servidor
 app.listen(port, () => {
-console.log('El servidor está escuchando en el puerto', port);
+console.log("El servidor está escuchando en el puerto", port);
 });
+  
