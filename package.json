@@ -2,10 +2,10 @@
   "name": "botfacebooknodejs",
   "version": "1.0.0",
   "description": "messenger bot nodejs witAI",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon --exec babel-node src/server.js"
+    "start": "nodemon --exec babel-node src/index.js"
   },
   "keywords": [
     "messenger",
@@ -13,7 +13,7 @@
     "nodejs",
     "witAI"
   ],
-  "author": "Hary Pham",
+  "author": "JP",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.19.0",
